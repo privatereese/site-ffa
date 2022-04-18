@@ -306,6 +306,9 @@ ifeq ($(GLUON_TARGET),ath79-generic)
 	GLUON_ubiquiti-unifiap-outdoor+_SITE_PACKAGES += $(NO_USB_PACKAGES_WITHOUT_HID)
 	GLUON_ubiquiti-unifi-ap_SITE_PACKAGES += $(NO_USB_PACKAGES_WITHOUT_HID)
 	GLUON_ubiquiti-unifi-ap-pro_SITE_PACKAGES += $(NO_USB_PACKAGES_WITHOUT_HID)
+
+	# image too big with USB packages
+	GLUON_tp-link-archer-d50-v1_SITE_PACKAGES += $(NO_USB_PACKAGES_WITHOUT_HID)
 endif
 
 # ath79-generic
@@ -332,6 +335,10 @@ endif
 ifeq ($(GLUON_TARGET),lantiq-xrx200)
 	GLUON_SITE_PACKAGES += \
 		$(USB_PACKAGES_WITHOUT_HID)
+
+	# image too big with USB packages
+	GLUON_tp-link-td-w8970_SITE_PACKAGES += $(NO_USB_PACKAGES_WITHOUT_HID)
+	GLUON_tp-link-td-w8980_SITE_PACKAGES += $(NO_USB_PACKAGES_WITHOUT_HID)
 endif
 
 # lantiq-xway
@@ -376,6 +383,9 @@ ifeq ($(GLUON_TARGET),ramips-mt7620)
 	GLUON_SITE_PACKAGES += \
 		$(USB_PACKAGES_WITHOUT_HID) \
 		$(TLS_PACKAGES)
+
+	# image too big with USB packages
+	GLUON_nexx-wt3020-8m_SITE_PACKAGES += $(NO_USB_PACKAGES_WITHOUT_HID)
 endif
 
 # ramips-mt7621
