@@ -1,6 +1,6 @@
 GLUON_BUILD_DIR := gluon-build
 GLUON_GIT_URL := https://github.com/tecff/gluon.git
-GLUON_GIT_REF := 805cbc902f7c70b4cc6bc970fc5bc21a64f23200
+GLUON_GIT_REF := b8227a0f037aaf85fa54b2960f9c6263c9ee9beb
 
 SECRET_KEY_FILE ?= ${HOME}/.gluon-secret-key
 
