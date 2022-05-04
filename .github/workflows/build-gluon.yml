@@ -38,16 +38,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      
       - name: Install Dependencies
         run: sudo contrib/actions/install-dependencies.sh
+        
       - name: Build
         run: contrib/actions/run-build.sh ${{ matrix.target }}
+        
       - name: Archive build logs
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v1
         with:
           name: ${{ matrix.target }}_logs
           path: openwrt/logs
+          
       - name: Archive build output
         uses: actions/upload-artifact@v1
         with:
