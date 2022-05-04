@@ -12,6 +12,7 @@ on:
       - multidomain
       - next
     paths:
+      - "contrib/**"
       - "i18n/**"
       - "Makefile"
       - "modules"
@@ -21,6 +22,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
+      - "contrib/**"
       - "i18n/**"
       - "Makefile"
       - "modules"
