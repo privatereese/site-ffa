@@ -40,10 +40,10 @@ jobs:
       - uses: actions/checkout@v3
       
       - name: Install Dependencies
-        run: sudo ./contrib/actions/install-dependencies.sh
+        run: sudo site-ffa/contrib/actions/install-dependencies.sh
         
       - name: Build
-        run: ./contrib/actions/run-build.sh ${{ matrix.target }}
+        run: site-ffa/contrib/actions/run-build.sh ${{ matrix.target }}
         
       - name: Archive build logs
         if: ${{ !cancelled() }}
