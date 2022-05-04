@@ -43,10 +43,10 @@ jobs:
         run: pwd && ls
       
       - name: Install Dependencies
-        run: sudo site-ffa/contrib/actions/install-dependencies.sh
+        run: sudo bash contrib/actions/install-dependencies.sh
         
       - name: Build
-        run: site-ffa/contrib/actions/run-build.sh ${{ matrix.target }}
+        run: sudo bash contrib/actions/run-build.sh ${{ matrix.target }}
         
       - name: Archive build logs
         if: ${{ !cancelled() }}
