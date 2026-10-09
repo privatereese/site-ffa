@@ -27,10 +27,12 @@ pipeline {
             steps {
                 checkout scm
                 // Makefile derives GLUON_RELEASE from `git describe --tags`,
-                // multibranch checkouts don't fetch tags by default
+                // multibranch checkouts don't fetch tags by default.
+                // Fail hard: on release branches a missing tag would yield
+                // a wrong or empty GLUON_RELEASE in a publishable build.
                 sh '''#!/usr/bin/env bash
                     set -euo pipefail
-                    git fetch --tags --force origin || echo "WARNING: could not fetch tags, GLUON_RELEASE may be wrong"
+                    git fetch --tags --force origin
                 '''
             }
         }
