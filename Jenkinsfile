@@ -5,6 +5,10 @@ pipeline {
         timestamps()
         timeout(time: 14, unit: 'HOURS')
         disableConcurrentBuilds()
+        // Multibranch: every branch/PR/tag gets its own job, keep disk usage bounded
+        buildDiscarder(logRotator(numToKeepStr: '10', artifactNumToKeepStr: '3'))
+        // we check out explicitly in the 'Checkout' stage (incl. tags)
+        skipDefaultCheckout()
     }
 
     environment {
@@ -13,15 +17,51 @@ pipeline {
 
     parameters {
         string(name: 'GLUON_TARGETS', defaultValue: '', description: 'Optional: override GLUON_TARGETS (space-separated). Empty = use Makefile defaults.')
-        string(name: 'GLUON_AUTOUPDATER_BRANCH', defaultValue: 'experimental', description: 'Autoupdater branch (e.g. experimental, stable). Required when SIGN_BUILD=true.')
+        string(name: 'GLUON_AUTOUPDATER_BRANCH', defaultValue: '', description: 'Optional: autoupdater branch (e.g. experimental, beta, stable). Empty = derive from the branch name (experimental*, beta*, stable*); other branches and PRs build snapshots without autoupdater. Required when SIGN_BUILD=true.')
         string(name: 'JOBS', defaultValue: '', description: 'Parallel make jobs (e.g. 9). Empty = auto-detect from /proc/cpuinfo.')
-        booleanParam(name: 'SIGN_BUILD', defaultValue: false, description: 'Sign the autoupdater manifest. Requires gluon-secret-key credential in Jenkins.')
+        booleanParam(name: 'SIGN_BUILD', defaultValue: false, description: 'Sign the autoupdater manifest. Requires gluon-secret-key credential in Jenkins. Only allowed on experimental*, beta*, stable* branches and tags, never on pull requests.')
     }
 
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
+                // Makefile derives GLUON_RELEASE from `git describe --tags`,
+                // multibranch checkouts don't fetch tags by default
+                sh '''#!/usr/bin/env bash
+                    set -euo pipefail
+                    git fetch --tags --force origin || echo "WARNING: could not fetch tags, GLUON_RELEASE may be wrong"
+                '''
+            }
+        }
+
+        stage('Resolve branch settings') {
+            steps {
+                script {
+                    def releaseBranchPattern = /^(experimental|beta|stable)([-_.].*)?$/
+                    def isPullRequest = env.CHANGE_ID != null
+                    def isTag = env.TAG_NAME != null
+                    def isReleaseBranch = !isPullRequest && !isTag && (env.BRANCH_NAME ?: '') ==~ releaseBranchPattern
+
+                    def autoupdaterBranch = params.GLUON_AUTOUPDATER_BRANCH?.trim()
+                    if (!autoupdaterBranch && isReleaseBranch) {
+                        // e.g. experimental-v2021 -> experimental, stable-v2021 -> stable
+                        autoupdaterBranch = env.BRANCH_NAME.replaceFirst(releaseBranchPattern, '$1')
+                    }
+                    // tags: Makefile sets GLUON_AUTOUPDATER_BRANCH=stable on exact tag matches
+                    env.EFFECTIVE_AUTOUPDATER_BRANCH = autoupdaterBranch ?: ''
+
+                    if (params.SIGN_BUILD) {
+                        if (isPullRequest) {
+                            error('SIGN_BUILD is not allowed for pull request builds.')
+                        }
+                        if (!isReleaseBranch && !isTag) {
+                            error("SIGN_BUILD is only allowed on experimental*, beta*, stable* branches and tags, not on '${env.BRANCH_NAME}'.")
+                        }
+                    }
+
+                    echo "Branch: ${env.BRANCH_NAME}, PR: ${isPullRequest}, tag: ${isTag}, autoupdater branch: ${env.EFFECTIVE_AUTOUPDATER_BRANCH ?: '(none / Makefile default)'}"
+                }
             }
         }
 
@@ -101,7 +141,7 @@ pipeline {
         stage('Build firmware') {
             steps {
                 script {
-                    if (params.SIGN_BUILD && !params.GLUON_AUTOUPDATER_BRANCH?.trim()) {
+                    if (params.SIGN_BUILD && !env.EFFECTIVE_AUTOUPDATER_BRANCH && !env.TAG_NAME) {
                         error('SIGN_BUILD=true requires GLUON_AUTOUPDATER_BRANCH to be set.')
                     }
 
@@ -110,8 +150,8 @@ pipeline {
                     if (params.GLUON_TARGETS?.trim()) {
                         makeVars += " GLUON_TARGETS='${params.GLUON_TARGETS.trim()}'"
                     }
-                    if (params.GLUON_AUTOUPDATER_BRANCH?.trim()) {
-                        makeVars += " GLUON_AUTOUPDATER_BRANCH='${params.GLUON_AUTOUPDATER_BRANCH.trim()}'"
+                    if (env.EFFECTIVE_AUTOUPDATER_BRANCH) {
+                        makeVars += " GLUON_AUTOUPDATER_BRANCH='${env.EFFECTIVE_AUTOUPDATER_BRANCH}'"
                     }
                     def makeTarget = params.SIGN_BUILD ? 'sign' : 'all'
                     def cacheMount = '-v "$GLUON_CACHE_DIR":/gluon/gluon-build --tmpfs /tmp'
